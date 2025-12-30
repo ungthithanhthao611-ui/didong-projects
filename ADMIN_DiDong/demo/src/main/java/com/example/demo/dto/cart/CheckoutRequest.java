@@ -14,6 +14,7 @@ public class CheckoutRequest {
     private Double total_amount;
     private Double shipping_fee;
     private String email; // Keep for compatibility if needed
+    private String voucherCode;
 
     // Getters and Setters
     public Long getUserId() {
@@ -86,5 +87,13 @@ public class CheckoutRequest {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getVoucherCode() {
+        return voucherCode;
+    }
+
+    public void setVoucherCode(String voucherCode) {
+        this.voucherCode = voucherCode;
     }
 }

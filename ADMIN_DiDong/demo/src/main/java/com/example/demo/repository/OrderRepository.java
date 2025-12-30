@@ -109,6 +109,8 @@ public class OrderRepository {
 
                     o.setOrderStatus(rs.getString("order_status"));
                     o.setTotalAmount(rs.getDouble("total_amount"));
+                    o.setVoucherId(rs.wasNull() ? null : rs.getLong("voucher_id"));
+                    o.setDiscountAmount(rs.getDouble("discount_amount"));
                     return o;
                 }
             }
@@ -153,9 +155,9 @@ public class OrderRepository {
 
     // --- 3. TẠO ĐƠN HÀNG ---
     public Long createOrder(Long userId, String email, double totalAmount, String status, String name, String phone,
-            String address)
+            String address, Long voucherId, double discountAmount)
             throws SQLException {
-        String sql = "INSERT INTO orders (user_id, email, order_date, order_status, total_amount, customer_name, phone, address) VALUES (?, ?, CURDATE(), ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO orders (user_id, email, order_date, order_status, total_amount, customer_name, phone, address, voucher_id, discount_amount) VALUES (?, ?, CURDATE(), ?, ?, ?, ?, ?, ?, ?)";
         try (Connection c = dataSource.getConnection();
                 PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setObject(1, userId);
@@ -165,6 +167,8 @@ public class OrderRepository {
             ps.setString(5, name);
             ps.setString(6, phone);
             ps.setString(7, address);
+            ps.setObject(8, voucherId);
+            ps.setDouble(9, discountAmount);
             ps.executeUpdate();
             ResultSet rs = ps.getGeneratedKeys();
             rs.next();
@@ -291,6 +295,8 @@ public class OrderRepository {
 
             o.setOrderStatus(rs.getString("order_status"));
             o.setTotalAmount(rs.getDouble("total_amount"));
+            o.setVoucherId(rs.wasNull() ? null : rs.getLong("voucher_id"));
+            o.setDiscountAmount(rs.getDouble("discount_amount"));
             list.add(o);
         }
         return list;

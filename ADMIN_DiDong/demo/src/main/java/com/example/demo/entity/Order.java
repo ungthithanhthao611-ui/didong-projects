@@ -40,6 +40,12 @@ public class Order {
     @Column(name = "payment_id")
     private Long paymentId;
 
+    @Column(name = "voucher_id")
+    private Long voucherId;
+
+    @Column(name = "discount_amount")
+    private Double discountAmount = 0.0;
+
     // 1 Order có nhiều OrderItem
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
     private List<OrderItem> orderItems;
@@ -131,6 +137,22 @@ public class Order {
 
     public void setOrderItems(List<OrderItem> orderItems) {
         this.orderItems = orderItems;
+    }
+
+    public Long getVoucherId() {
+        return voucherId;
+    }
+
+    public void setVoucherId(Long voucherId) {
+        this.voucherId = voucherId;
+    }
+
+    public Double getDiscountAmount() {
+        return discountAmount;
+    }
+
+    public void setDiscountAmount(Double discountAmount) {
+        this.discountAmount = discountAmount;
     }
 
     // Trong file Order.java, thêm đoạn này vào cuối file

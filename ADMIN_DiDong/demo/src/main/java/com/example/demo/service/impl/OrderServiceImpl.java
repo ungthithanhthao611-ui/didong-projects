@@ -2,11 +2,13 @@ package com.example.demo.service.impl;
 
 import com.example.demo.dto.cart.CheckoutRequest;
 import com.example.demo.entity.Order;
+import com.example.demo.entity.Voucher;
 import com.example.demo.repository.CartRepository;
 import com.example.demo.repository.OrderRepository;
+import com.example.demo.repository.VoucherRepository;
 import com.example.demo.service.OrderService;
+import com.example.demo.service.VoucherService;
 import org.springframework.stereotype.Service;
-
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
@@ -16,10 +18,15 @@ public class OrderServiceImpl implements OrderService {
 
     private final CartRepository cartRepository;
     private final OrderRepository orderRepository;
+    private final VoucherService voucherService;
+    private final VoucherRepository voucherRepository;
 
-    public OrderServiceImpl(CartRepository cartRepository, OrderRepository orderRepository) {
+    public OrderServiceImpl(CartRepository cartRepository, OrderRepository orderRepository,
+            VoucherService voucherService, VoucherRepository voucherRepository) {
         this.cartRepository = cartRepository;
         this.orderRepository = orderRepository;
+        this.voucherService = voucherService;
+        this.voucherRepository = voucherRepository;
     }
 
     @Override
@@ -31,6 +38,19 @@ public class OrderServiceImpl implements OrderService {
                 throw new RuntimeException("Giỏ hàng trống");
 
             double total = cartRepository.getCartTotal(cartId);
+            double discountAmount = 0.0;
+            Long voucherId = null;
+
+            if (request.getVoucherCode() != null && !request.getVoucherCode().isEmpty()) {
+                discountAmount = voucherService.calculateDiscount(request.getVoucherCode(), total);
+                Voucher v = voucherRepository.findByCode(request.getVoucherCode()).orElse(null);
+                if (v != null) {
+                    voucherId = v.getId();
+                    voucherService.useVoucher(request.getUserId(), request.getVoucherCode());
+                }
+            }
+
+            double finalTotal = total - discountAmount;
 
             // Lấy email nếu request không có
             String email = request.getEmail();
@@ -42,11 +62,13 @@ public class OrderServiceImpl implements OrderService {
             Long orderId = orderRepository.createOrder(
                     request.getUserId(),
                     email,
-                    total,
+                    finalTotal,
                     "PENDING",
                     request.getName(),
                     request.getPhone(),
-                    request.getAddress());
+                    request.getAddress(),
+                    voucherId,
+                    discountAmount);
 
             List<Map<String, Object>> cartItems = cartRepository.getCartItemsForCheckout(cartId);
             for (Map<String, Object> item : cartItems) {

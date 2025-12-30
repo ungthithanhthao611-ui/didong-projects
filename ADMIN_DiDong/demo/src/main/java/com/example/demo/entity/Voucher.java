@@ -1,31 +1,53 @@
 package com.example.demo.entity;
+
+import jakarta.persistence.*;
 import java.time.LocalDate;
 
+@Entity
+@Table(name = "vouchers")
 public class Voucher {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(unique = true, nullable = false)
     private String code;
+
+    // DB: discount
+    @Column(name = "discount")
     private Double discount;
+
+    // DB: min_order_amount
+    @Column(name = "min_order_amount")
     private Double minOrderAmount;
-    private LocalDate expiryDate;
+
+    // DB: usage_limit
+    @Column(name = "usage_limit")
     private Integer usageLimit;
+
+    // DB: expiry_date
+    @Column(name = "expiry_date")
+    private LocalDate expiryDate;
+
+    // DB: is_active
+    @Column(name = "is_active")
     private Boolean isActive;
 
-    // Constructor, Getter, Setter
-    public Voucher() {}
-    
-    // ... Bạn tự generate Getter/Setter nhé (Alt+Insert trong IntelliJ) ...
+    // ===== GETTER SETTER =====
     public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
     public String getCode() { return code; }
-    public void setCode(String code) { this.code = code; }
     public Double getDiscount() { return discount; }
-    public void setDiscount(Double discount) { this.discount = discount; }
     public Double getMinOrderAmount() { return minOrderAmount; }
-    public void setMinOrderAmount(Double minOrderAmount) { this.minOrderAmount = minOrderAmount; }
-    public LocalDate getExpiryDate() { return expiryDate; }
-    public void setExpiryDate(LocalDate expiryDate) { this.expiryDate = expiryDate; }
     public Integer getUsageLimit() { return usageLimit; }
+    public LocalDate getExpiryDate() { return expiryDate; }
+    public Boolean getIsActive() { return isActive; }
+
+    public void setId(Long id) { this.id = id; }
+    public void setCode(String code) { this.code = code; }
+    public void setDiscount(Double discount) { this.discount = discount; }
+    public void setMinOrderAmount(Double minOrderAmount) { this.minOrderAmount = minOrderAmount; }
     public void setUsageLimit(Integer usageLimit) { this.usageLimit = usageLimit; }
-    public Boolean getActive() { return isActive; }
-    public void setActive(Boolean active) { isActive = active; }
+    public void setExpiryDate(LocalDate expiryDate) { this.expiryDate = expiryDate; }
+    public void setIsActive(Boolean active) { isActive = active; }
 }

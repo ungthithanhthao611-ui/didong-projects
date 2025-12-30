@@ -2,70 +2,120 @@ package com.example.demo.controller;
 
 import com.example.demo.entity.Voucher;
 import com.example.demo.repository.VoucherRepository;
-import org.springframework.http.HttpHeaders;
+import com.example.demo.service.VoucherService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/vouchers")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:8081"}, exposedHeaders = "Content-Range")
+@CrossOrigin("*")
 public class VoucherController {
 
-    private final VoucherRepository voucherRepository;
+    @Autowired
+    private VoucherService voucherService;
 
-    public VoucherController(VoucherRepository voucherRepository) {
-        this.voucherRepository = voucherRepository;
-    }
+    @Autowired
+    private VoucherRepository voucherRepository;
 
-    // ✅ Admin: Lấy danh sách (Có Header Content-Range)
+    // ======================================================
+    // 1️⃣ GET ALL VOUCHERS (ProductDetail)
+    // ======================================================
     @GetMapping
-    public ResponseEntity<List<Voucher>> getAll() {
-        List<Voucher> list = voucherRepository.findAll();
-        HttpHeaders headers = new HttpHeaders();
-        headers.add("Content-Range", "vouchers 0-" + list.size() + "/" + list.size());
-        headers.add("Access-Control-Expose-Headers", "Content-Range");
-        return ResponseEntity.ok().headers(headers).body(list);
+    public ResponseEntity<List<Voucher>> getAllVouchers() {
+
+        List<Voucher> vouchers = voucherRepository.findAll()
+                .stream()
+                .filter(v -> Boolean.TRUE.equals(v.getIsActive()))
+                .filter(v -> !v.getExpiryDate().isBefore(LocalDate.now()))
+                .toList();
+
+        return ResponseEntity.ok(vouchers);
     }
 
-    // ✅ Admin: Lấy chi tiết 1 voucher (Cho trang Edit)
-    @GetMapping("/{id}")
-    public Voucher getById(@PathVariable Long id) {
-        return voucherRepository.findById(id);
+    // ======================================================
+    // 2️⃣ CLAIM VOUCHER
+    // ======================================================
+    @PostMapping("/claim")
+    public ResponseEntity<?> claimVoucher(@RequestBody Map<String, Object> body) {
+
+        System.out.println("CLAIM PAYLOAD = " + body);
+
+        try {
+            if (!body.containsKey("userId") || !body.containsKey("voucherCode")) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "Thiếu userId hoặc voucherCode"));
+            }
+
+            Long userId = Long.valueOf(body.get("userId").toString());
+            String voucherCode = body.get("voucherCode").toString();
+
+            voucherService.claimVoucher(userId, voucherCode);
+
+            return ResponseEntity.ok(
+                    Map.of("message", "Nhận voucher thành công")
+            );
+
+        } catch (Exception e) {
+            // LOG LÝ DO THẬT SỰ
+            System.out.println("CLAIM ERROR = " + e.getMessage());
+
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", e.getMessage()));
+        }
     }
 
-    // ✅ Admin: Tạo mới (Trả về Object có ID để React Admin biết thành công)
-    @PostMapping
-    public ResponseEntity<Voucher> create(@RequestBody Voucher voucher) {
-        Voucher savedVoucher = voucherRepository.save(voucher);
-        return ResponseEntity.ok(savedVoucher);
+    // ======================================================
+    // 3️⃣ GET USER VOUCHERS (Checkout)
+    // ======================================================
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Voucher>> getUserVouchers(@PathVariable Long userId) {
+        return ResponseEntity.ok(
+                voucherService.getUserVouchers(userId)
+        );
     }
 
-    // ✅ Admin: Cập nhật
-    @PutMapping("/{id}")
-    public ResponseEntity<Voucher> update(@PathVariable Long id, @RequestBody Voucher voucher) {
-        Voucher updatedVoucher = voucherRepository.update(id, voucher);
-        return ResponseEntity.ok(updatedVoucher);
+    // ======================================================
+    // 4️⃣ CALCULATE DISCOUNT (Checkout apply voucher)
+    // ======================================================
+    @PostMapping("/calculate-discount")
+    public ResponseEntity<?> calculateDiscount(@RequestBody Map<String, Object> body) {
+
+        try {
+            if (!body.containsKey("code") || !body.containsKey("totalAmount")) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "Thiếu code hoặc totalAmount"));
+            }
+
+            String code = body.get("code").toString();
+            Double totalAmount = Double.valueOf(body.get("totalAmount").toString());
+
+            Double discount = voucherService.calculateDiscount(code, totalAmount);
+
+            return ResponseEntity.ok(
+                    Map.of("discount", discount)
+            );
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", e.getMessage()));
+        }
     }
 
-    // Admin: Xóa
-    @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
-        voucherRepository.delete(id);
-    }
-
-    // User: Kiểm tra mã
-    @GetMapping("/check")
-    public Voucher checkVoucher(@RequestParam String code, @RequestParam double total) {
-        Voucher v = voucherRepository.findByCode(code.toUpperCase());
-        if (v == null) throw new RuntimeException("Mã giảm giá không tồn tại hoặc đã hết hạn!");
-        if (total < v.getMinOrderAmount()) throw new RuntimeException("Đơn hàng tối thiểu " + v.getMinOrderAmount() + "đ mới được dùng!");
-        return v;
-    }
-
-    // Public: Lấy mã còn hạn
-    @GetMapping("/public")
-    public List<Voucher> getPublicVouchers() {
-        return voucherRepository.findActiveVouchers();
+    // ======================================================
+    // 5️⃣ GET BEST VOUCHER (Optional – gợi ý)
+    // ======================================================
+    @GetMapping("/best")
+    public ResponseEntity<?> getBestVoucher(
+            @RequestParam Long userId,
+            @RequestParam Double orderTotal
+    ) {
+        return ResponseEntity.ok(
+                voucherService.getBestVoucher(userId, orderTotal)
+        );
     }
 }
